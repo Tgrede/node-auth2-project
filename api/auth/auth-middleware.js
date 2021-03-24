@@ -1,4 +1,5 @@
 const { JWT_SECRET } = require("../secrets"); // use this secret!
+const {findBy} = require('../users/users-model')
 
 const restricted = (req, res, next) => {
   /*
@@ -32,7 +33,21 @@ const only = role_name => (req, res, next) => {
 }
 
 
-const checkUsernameExists = (req, res, next) => {
+const checkUsernameExists = async (req, res, next) => {
+  try{
+    const usernameToCheck = req.body.username
+    console.log(usernameToCheck)
+    const userFound = await findBy(usernameToCheck)
+    console.log(userFound)
+    if(!userFound){
+      res.status(401).json({message:'invalid credentials'})
+    } else {
+      next()
+    }
+  }catch(err){
+    next(err)
+  }
+  
   /*
     If the username in req.body does NOT exist in the database
     status 401
@@ -44,6 +59,20 @@ const checkUsernameExists = (req, res, next) => {
 
 
 const validateRoleName = (req, res, next) => {
+  let credentials = req.body
+  const trimmedRoleCreds = credentials.role_name.trim()
+  console.log(credentials)
+  if(!credentials.role_name || trimmedRoleCreds === ''){
+    credentials.role_name = 'student'
+    console.log(credentials)
+    next()
+  } else if (trimmedRoleCreds === 'admin') {
+    res.status(422).json({message: 'Role name can not be admin'})
+  } else if (trimmedRoleCreds.length > 32) {
+    res.status(422).json({message: 'Role name can not be longer than 32 chars'})
+  } else {
+    next()
+  }
   /*
     If the role_name in the body is valid, set req.role_name to be the trimmed string and proceed.
 
